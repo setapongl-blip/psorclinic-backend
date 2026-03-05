@@ -3,23 +3,17 @@ import fetch from "node-fetch";
 import cors from "cors";
 
 const app = express();
-
-// IMPORTANT: Render ต้องใช้ PORT จาก environment
 const PORT = process.env.PORT || 3000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// ดึง HF Token จาก Environment
 const HF_TOKEN = process.env.HF_TOKEN;
 
-// หน้า Home (แก้ Cannot GET /)
 app.get("/", (req, res) => {
   res.send("PsorClinic Backend is running 🚀");
 });
 
-// API วิเคราะห์
 app.post("/analyze", async (req, res) => {
   try {
     if (!HF_TOKEN) {
@@ -42,12 +36,18 @@ app.post("/analyze", async (req, res) => {
 
     const data = await response.json();
 
-    res.json({
-      result:
-        data?.[0]?.generated_text ||
-        data?.generated_text ||
-        "ไม่สามารถวิเคราะห์ได้",
-    });
+    // ✅ ตรงนี้ต้องอยู่นอก res.json
+    let aiText = "ไม่สามารถวิเคราะห์ได้";
+
+    if (Array.isArray(data) && data.length > 0) {
+      aiText = data[0].generated_text;
+    } else if (data.generated_text) {
+      aiText = data.generated_text;
+    } else if (data.error) {
+      aiText = "HF Error: " + data.error;
+    }
+
+    res.json({ result: aiText });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
