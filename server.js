@@ -1,5 +1,4 @@
 import express from "express";
-import fetch from "node-fetch";
 import cors from "cors";
 
 const app = express();
@@ -15,7 +14,7 @@ app.get("/", (req, res) => {
   res.json({ status: "PsorClinic Backend running 🚀" });
 });
 
-// Analyze Route
+// Analyze
 app.post("/analyze", async (req, res) => {
   try {
     if (!HF_TOKEN) {
@@ -29,7 +28,7 @@ app.post("/analyze", async (req, res) => {
     }
 
     const response = await fetch(
-      "https://router.huggingface.co/v1/chat/completions",
+      "https://api-inference.huggingface.co/models/google/flan-t5-large",
       {
         method: "POST",
         headers: {
@@ -37,24 +36,14 @@ app.post("/analyze", async (req, res) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "mistralai/Mistral-7B-Instruct-v0.2",
-          messages: [
-            {
-              role: "system",
-              content: "You are a medical AI assistant specialized in psoriasis analysis."
-            },
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          max_tokens: 400,
-          temperature: 0.7
+          inputs: prompt,
+          parameters: {
+            max_new_tokens: 300
+          }
         }),
       }
     );
 
-    // Handle HTTP errors
     if (!response.ok) {
       const errorText = await response.text();
       return res.status(response.status).json({
@@ -65,18 +54,17 @@ app.post("/analyze", async (req, res) => {
 
     const data = await response.json();
 
-    if (!data.choices || data.choices.length === 0) {
-      return res.status(500).json({
-        error: "No response from AI",
-        raw: data
-      });
-    }
+    let resultText = "No response";
 
-    const aiText = data.choices[0].message.content;
+    if (Array.isArray(data) && data.length > 0) {
+      resultText = data[0].generated_text;
+    } else if (data.generated_text) {
+      resultText = data.generated_text;
+    }
 
     res.json({
       success: true,
-      result: aiText
+      result: resultText
     });
 
   } catch (err) {
