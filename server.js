@@ -23,7 +23,7 @@ app.post("/analyze", async (req, res) => {
     const prompt = req.body.prompt;
 
     const response = await fetch(
-  "https://router.huggingface.co/hf-inference/models/mistralai/Mistral-7B-Instruct-v0.2",
+  "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
   {
     method: "POST",
     headers: {
