@@ -9,16 +9,14 @@ app.use(express.json());
 
 const HF_TOKEN = process.env.HF_TOKEN;
 
-// Health Check
 app.get("/", (req, res) => {
   res.json({ status: "PsorClinic Backend running 🚀" });
 });
 
-// Analyze
 app.post("/analyze", async (req, res) => {
   try {
     if (!HF_TOKEN) {
-      return res.status(500).json({ error: "HF_TOKEN not set in environment" });
+      return res.status(500).json({ error: "HF_TOKEN not set" });
     }
 
     const { prompt } = req.body;
@@ -28,7 +26,7 @@ app.post("/analyze", async (req, res) => {
     }
 
     const response = await fetch(
-      "https://api-inference.huggingface.co/models/google/flan-t5-large",
+      "https://router.huggingface.co/v1/chat/completions",
       {
         method: "POST",
         headers: {
@@ -36,10 +34,20 @@ app.post("/analyze", async (req, res) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          inputs: prompt,
-          parameters: {
-            max_new_tokens: 300
-          }
+          model: "meta-llama/Meta-Llama-3-8B-Instruct",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a medical AI assistant specialized in psoriasis analysis."
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          max_tokens: 400,
+          temperature: 0.7
         }),
       }
     );
@@ -54,17 +62,9 @@ app.post("/analyze", async (req, res) => {
 
     const data = await response.json();
 
-    let resultText = "No response";
-
-    if (Array.isArray(data) && data.length > 0) {
-      resultText = data[0].generated_text;
-    } else if (data.generated_text) {
-      resultText = data.generated_text;
-    }
-
     res.json({
       success: true,
-      result: resultText
+      result: data.choices?.[0]?.message?.content || "No response"
     });
 
   } catch (err) {
