@@ -23,7 +23,7 @@ app.post("/analyze", async (req, res) => {
     const prompt = req.body.prompt;
 
     const response = await fetch(
-  "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
+  "https://router.huggingface.co/v1/chat/completions",
   {
     method: "POST",
     headers: {
@@ -31,25 +31,26 @@ app.post("/analyze", async (req, res) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      inputs: prompt,
+      model: "mistralai/Mistral-7B-Instruct-v0.2",
+      messages: [
+        { role: "user", content: prompt }
+      ],
+      max_tokens: 300
     }),
   }
 );
 
-    const data = await response.json();
+const data = await response.json();
 
-    // ✅ ตรงนี้ต้องอยู่นอก res.json
-    let aiText = "ไม่สามารถวิเคราะห์ได้";
+let aiText = "ไม่สามารถวิเคราะห์ได้";
 
-    if (Array.isArray(data) && data.length > 0) {
-      aiText = data[0].generated_text;
-    } else if (data.generated_text) {
-      aiText = data.generated_text;
-    } else if (data.error) {
-      aiText = "HF Error: " + data.error;
-    }
+if (data.choices && data.choices.length > 0) {
+  aiText = data.choices[0].message.content;
+} else if (data.error) {
+  aiText = "HF Error: " + data.error.message;
+}
 
-    res.json({ result: aiText });
+res.json({ result: aiText });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
